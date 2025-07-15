@@ -13,6 +13,10 @@ load_dotenv()
 
 app = FastAPI()
 
+origins = [
+     "https://jobodega.webflow.io/replicate",  
+    "https://www.jobodega.com/replicate",
+]
 # CORS para testes locais
 app.add_middleware(
     CORSMiddleware,
