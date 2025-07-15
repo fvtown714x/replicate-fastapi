@@ -13,6 +13,8 @@ load_dotenv()
 
 app = FastAPI()
 
+API_BASE_URL = "https://replicate-fastapi.onrender.com"
+
 origins = [
      "https://jobodega.webflow.io/replicate",  
     "https://www.jobodega.com/replicate",
@@ -68,7 +70,7 @@ async def gerar_headshot(
 
 
         # Retornar URL acessível publicamente
-        image_url = f"http://127.0.0.1:8000/temp/{img_id}_output.jpg"
+        image_url = f"{API_BASE_URL}/temp/{img_id}_output.jpg"
         time.sleep(0.3)  # Pequena espera (300ms)
         return {"image_url": image_url}
 
