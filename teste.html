@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Teste de Headshot</title>
+  <style>
+    #loading {
+      display: none;
+      font-weight: bold;
+      color: blue;
+      margin-top: 15px;
+    }
+    #resultado img {
+      max-width: 300px;
+      margin-top: 15px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Gerar Headshot</h2>
+  <form id="headshotForm">
+    <label>Imagem:</label><br>
+    <input type="file" name="image" required><br><br>
+
+    <label>Roupa:</label><br>
+    <input type="text" name="clothing" placeholder="Ex: terno azul" required><br><br>
+
+    <label>Fundo:</label><br>
+    <input type="text" name="background" placeholder="Ex: fundo branco" required><br><br>
+
+    <button type="submit">Gerar Headshot</button>
+  </form>
+
+  <div id="loading">⏳ Gerando imagem, por favor aguarde...</div>
+  <div id="resultado"></div>
+
+  <script>
+    document.getElementById("headshotForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const formData = new FormData(e.target);
+      const loadingDiv = document.getElementById("loading");
+      const resultadoDiv = document.getElementById("resultado");
+
+      loadingDiv.style.display = "block";
+      resultadoDiv.innerHTML = "";
+
+      try {
+        const response = await fetch("http://127.0.0.1:8000/gerar-headshot", {
+          method: "POST",
+          body: formData
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log("🔗 URL recebida:", data.image_url);
+
+          // Testar: abrir imagem em nova aba
+          window.open(data.image_url, "_blank");
+
+          // Forçar recarregamento da imagem com timestamp
+          const finalUrl = `${data.image_url}?t=${Date.now()}`;
+          resultadoDiv.innerHTML = `<img src="${finalUrl}" alt="Imagem gerada"/>`;
+
+        } else {
+          const error = await response.json();
+          resultadoDiv.innerHTML = <p style="color:red;">Erro: ${error.erro}</p>;
+        }
+      } catch (err) {
+        resultadoDiv.innerHTML = <p style="color:red;">Erro inesperado: ${err.message}</p>;
+      } finally {
+        loadingDiv.style.display = "none";
+      }
+    });
+  </script>
+</body>
+</html>
