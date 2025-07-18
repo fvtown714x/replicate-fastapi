@@ -1,8 +1,8 @@
-from typing import List
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from typing import List
 import replicate
 import os
 import time
@@ -16,20 +16,19 @@ app = FastAPI()
 
 API_BASE_URL = "https://replicate-fastapi.onrender.com"
 
-origins = [
-    "https://jobodega.webflow.io/replicate",  
-    "https://www.jobodega.com/replicate",
-]
-
-
+# CORS: ajuste para seu domínio
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,  
+    allow_origins=[
+        "https://jobodega.webflow.io",
+        "https://www.jobodega.com"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# Criar e servir pasta de arquivos gerados
 os.makedirs("temp", exist_ok=True)
 app.mount("/temp", StaticFiles(directory="temp"), name="temp")
 
@@ -38,13 +37,13 @@ app.mount("/temp", StaticFiles(directory="temp"), name="temp")
 async def gerar_headshot(
     image: UploadFile = File(...),
     gender: str = Form(...),
-    age: str = Form(...),
     profession: str = Form(...),
+    age: str = Form(...),
     clothing: str = Form(...),
-    backgrounds: List[str] = Form(...)
+    background: List[str] = Form(...),  # aceita múltiplos valores
 ):
     try:
-        # Salvar imagem temporária
+        # Salvar imagem original enviada
         file_ext = image.filename.split(".")[-1]
         img_id = str(uuid4())
         input_path = f"temp/{img_id}.{file_ext}"
@@ -52,44 +51,42 @@ async def gerar_headshot(
         with open(input_path, "wb") as f:
             shutil.copyfileobj(image.file, f)
 
-        # Juntar os backgrounds múltiplos
-        background_str = ", ".join(backgrounds)
+        # Gerar até 5 imagens com backgrounds diferentes
+        selected_backgrounds = background[:5]
+        image_urls = []
 
-        # Criar o prompt
-        prompt = f"""
-        Provide an ultra high-resolution professional LinkedIn headshot of a
-        {gender}, who works as a {profession}, aged {age}, wearing {clothing}, looking confident and approachable.
-        The background of this image is {background_str} and should be related to the {profession}.
-        The image is shot with studio-quality lighting, shallow depth of field, crisp facial detail, and soft shadows.
-        The person should have eye contact with the camera and a subtle smile.
-        The shots should have a professional look for corporate use.
-        DSLR photo style, centered composition, no accessories unless specified.
-        """
-
-        urls = []
-
-        for i in range(5):  # Gerar 5 imagens
-            input_data = {
-                "prompt": prompt.strip(),
-                "input_image": open(input_path, "rb"),
-                "output_format": "jpg"
-            }
+        for i, bg in enumerate(selected_backgrounds):
+            prompt = f"""
+            Provide an ultra high-resolution professional LinkedIn headshot of a
+            {gender}, 
+            Who works as a {profession},
+            aged {age},
+            wearing {clothing}, looking confident and approachable. 
+            The background of this image is {bg} and should be related to the {profession}. 
+            The image is shot with studio-quality lighting, shallow depth of field, crisp facial detail, and soft shadows. 
+            The person should have eye contact with the camera and a subtle smile. 
+            The shots should have a professional look for corporate use. DSLR photo style, centered composition, no accessories unless specified.
+            """
 
             output = replicate.run(
                 "black-forest-labs/flux-kontext-pro",
-                input=input_data
+                input={
+                    "prompt": prompt,
+                    "input_image": open(input_path, "rb"),
+                    "output_format": "jpg"
+                }
             )
 
-            # Salvar cada imagem
             output_path = f"temp/{img_id}_{i}_output.jpg"
             with open(output_path, "wb") as f:
-                output_bytes = output.read()
-                f.write(output_bytes)
+                f.write(output.read())
 
-            urls.append(f"{API_BASE_URL}/temp/{img_id}_{i}_output.jpg")
-            time.sleep(0.3)
+            image_url = f"{API_BASE_URL}/temp/{img_id}_{i}_output.jpg"
+            image_urls.append(image_url)
 
-        return {"image_urls": urls}
+            time.sleep(0.5)  # leve atraso para estabilidade
+
+        return {"image_urls": image_urls}
 
     except Exception as e:
         return JSONResponse(status_code=500, content={"erro": str(e)})
