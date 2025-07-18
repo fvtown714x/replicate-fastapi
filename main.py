@@ -1,3 +1,4 @@
+from typing import List
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,28 +16,26 @@ app = FastAPI()
 
 API_BASE_URL = "https://replicate-fastapi.onrender.com"
 
-origins = [
-     "https://jobodega.webflow.io/replicate",  
-    "https://www.jobodega.com/replicate",
-]
-# CORS para testes locais
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # ajuste para seu domínio Webflow depois
+    allow_origins=["*"],  # Em produção, substitua por Webflow
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Criar e expor pasta temp para acesso público
 os.makedirs("temp", exist_ok=True)
 app.mount("/temp", StaticFiles(directory="temp"), name="temp")
+
 
 @app.post("/gerar-headshot")
 async def gerar_headshot(
     image: UploadFile = File(...),
+    gender: str = Form(...),
+    age: str = Form(...),
+    profession: str = Form(...),
     clothing: str = Form(...),
-    background: str = Form(...),
+    backgrounds: List[str] = Form(...)
 ):
     try:
         # Salvar imagem temporária
@@ -47,32 +46,44 @@ async def gerar_headshot(
         with open(input_path, "wb") as f:
             shutil.copyfileobj(image.file, f)
 
-        # Prompt para a Replicate
-        prompt = f"Professional headshot, wearing {clothing}, background: {background}"
+        # Juntar os backgrounds múltiplos
+        background_str = ", ".join(backgrounds)
 
-        input_data = {
-            "prompt": prompt,
-            "input_image": open(input_path, "rb"),
-            "output_format": "jpg"
-        }
+        # Criar o prompt
+        prompt = f"""
+        Provide an ultra high-resolution professional LinkedIn headshot of a
+        {gender}, who works as a {profession}, aged {age}, wearing {clothing}, looking confident and approachable.
+        The background of this image is {background_str} and should be related to the {profession}.
+        The image is shot with studio-quality lighting, shallow depth of field, crisp facial detail, and soft shadows.
+        The person should have eye contact with the camera and a subtle smile.
+        The shots should have a professional look for corporate use.
+        DSLR photo style, centered composition, no accessories unless specified.
+        """
 
-        output = replicate.run(
-            "black-forest-labs/flux-kontext-pro",
-            input=input_data
-        )
+        urls = []
 
-        # Salvar imagem gerada
-        output_path = f"temp/{img_id}_output.jpg"
-        with open(output_path, "wb") as f:
-            output_bytes = output.read()
+        for i in range(5):  # Gerar 5 imagens
+            input_data = {
+                "prompt": prompt.strip(),
+                "input_image": open(input_path, "rb"),
+                "output_format": "jpg"
+            }
+
+            output = replicate.run(
+                "black-forest-labs/flux-kontext-pro",
+                input=input_data
+            )
+
+            # Salvar cada imagem
+            output_path = f"temp/{img_id}_{i}_output.jpg"
             with open(output_path, "wb") as f:
+                output_bytes = output.read()
                 f.write(output_bytes)
 
+            urls.append(f"{API_BASE_URL}/temp/{img_id}_{i}_output.jpg")
+            time.sleep(0.3)
 
-        # Retornar URL acessível publicamente
-        image_url = f"{API_BASE_URL}/temp/{img_id}_output.jpg"
-        time.sleep(0.3)  # Pequena espera (300ms)
-        return {"image_url": image_url}
+        return {"image_urls": urls}
 
     except Exception as e:
         return JSONResponse(status_code=500, content={"erro": str(e)})
