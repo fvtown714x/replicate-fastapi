@@ -16,9 +16,15 @@ app = FastAPI()
 
 API_BASE_URL = "https://replicate-fastapi.onrender.com"
 
+origins = [
+    "https://jobodega.webflow.io/replicate",  
+    "https://www.jobodega.com/replicate",
+]
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Em produção, substitua por Webflow
+    allow_origins=origins,  
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
