@@ -21,8 +21,8 @@ API_BASE_URL = "https://replicate-fastapi.onrender.com"
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://jobodega.webflow.io",
-        "https://www.jobodega.com"
+        "https://jobodega.webflow.io/replicate",
+        "https://www.jobodega.com/replicate"
     ],
     allow_credentials=True,
     allow_methods=["*"],
