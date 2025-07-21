@@ -14,9 +14,10 @@ load_dotenv()
 
 app = FastAPI()
 
+# URL base para montar os links das imagens
 API_BASE_URL = "https://replicate-fastapi.onrender.com"
 
-# CORS: ajuste para seu domínio
+# CORS configurado para aceitar Webflow
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -28,7 +29,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Criar e servir pasta de arquivos gerados
+# Cria e serve os arquivos gerados no endpoint /temp
 os.makedirs("temp", exist_ok=True)
 app.mount("/temp", StaticFiles(directory="temp"), name="temp")
 
@@ -40,51 +41,57 @@ async def gerar_headshot(
     profession: str = Form(...),
     age: str = Form(...),
     clothing: str = Form(...),
-    background: List[str] = Form(...),  # aceita múltiplos valores
+    background: List[str] = Form(...),  # múltiplos valores possíveis
 ):
     try:
-        # Salvar imagem original enviada
+        # Salva imagem temporariamente
         file_ext = image.filename.split(".")[-1]
         img_id = str(uuid4())
-        input_path = f"temp/{img_id}.{file_ext}"
+        input_filename = f"{img_id}.{file_ext}"
+        input_path = os.path.join("temp", input_filename)
 
         with open(input_path, "wb") as f:
             shutil.copyfileobj(image.file, f)
 
-        # Gerar até 5 imagens com backgrounds diferentes
+        # Monta a URL pública para a imagem
+        image_url_input = f"{API_BASE_URL}/temp/{input_filename}"
+
+        # Gera até 5 imagens com backgrounds diferentes
         selected_backgrounds = background[:5]
         image_urls = []
 
         for i, bg in enumerate(selected_backgrounds):
             prompt = f"""
-            Provide an ultra high-resolution professional LinkedIn headshot of a
+            Provide an ultra high-resolution professional headshot of a
             {gender}, 
-            Who works as a {profession},
+            who works as a {profession},
             aged {age},
-            wearing {clothing}, looking confident and approachable. 
+            wearing {clothing}. 
             The background of this image is {bg} and should be related to the {profession}. 
-            The image is shot with studio-quality lighting, shallow depth of field, crisp facial detail, and soft shadows. 
-            The person should have eye contact with the camera and a subtle smile. 
+            The image is shot with studio-quality lighting, shallow depth of field, and soft shadows.  
             The shots should have a professional look for corporate use. DSLR photo style, centered composition, no accessories unless specified.
             """
 
+            # Executa o modelo com a imagem da URL
             output = replicate.run(
                 "black-forest-labs/flux-kontext-pro",
                 input={
                     "prompt": prompt,
-                    "input_image": open(input_path, "rb"),
+                    "input_image": image_url_input,
                     "output_format": "jpg"
                 }
             )
 
+            # Salva a imagem de saída
             output_path = f"temp/{img_id}_{i}_output.jpg"
             with open(output_path, "wb") as f:
                 f.write(output.read())
 
+            # Monta a URL pública da imagem gerada
             image_url = f"{API_BASE_URL}/temp/{img_id}_{i}_output.jpg"
             image_urls.append(image_url)
 
-            time.sleep(0.5)  # leve atraso para estabilidade
+            time.sleep(0.5)  # delay leve por segurança
 
         return {"image_urls": image_urls}
 
