@@ -106,4 +106,7 @@ async def gerar_headshot(
         return {"image_urls": image_urls}
 
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return JSONResponse(status_code=500, content={"erro": str(e)})
+
