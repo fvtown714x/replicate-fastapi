@@ -15,21 +15,18 @@ load_dotenv()
 
 app = FastAPI()
 
-# URL base para montar os links das imagens
 API_BASE_URL = "https://replicate-fastapi.onrender.com"
 
-# CORS configurado para aceitar Webflow
+# CORS para aceitar Webflow
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "*"
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Cria e serve os arquivos gerados no endpoint /temp
+# Cria pasta e serve imagens em /temp
 os.makedirs("temp", exist_ok=True)
 app.mount("/temp", StaticFiles(directory="temp"), name="temp")
 
@@ -44,7 +41,7 @@ async def gerar_headshot(
     background: List[str] = Form(...),
 ):
     try:
-        # Salva imagem temporária local
+        # Salva imagem recebida localmente
         file_ext = image.filename.split(".")[-1]
         img_id = str(uuid4())
         input_filename = f"{img_id}.{file_ext}"
@@ -53,13 +50,8 @@ async def gerar_headshot(
         with open(input_path, "wb") as f:
             shutil.copyfileobj(image.file, f)
 
-        # ⚠️ UPLOAD para serviço público (ex: Cloudinary ou ImgBB)
-        # Para teste local, podemos usar temporariamente o caminho local, mas isso pode falhar na produção
-        # Aqui você deveria subir a imagem para Cloudinary ou outro serviço que dê uma URL HTTPS pública
-
-        # Como alternativa temporária: use o arquivo local via leitura binária
-        with open(input_path, "rb") as img_file:
-            image_bytes = img_file.read()
+        # Cria URL pública da imagem que acabou de salvar
+        image_input_url = f"{API_BASE_URL}/temp/{input_filename}"
 
         image_urls = []
         selected_backgrounds = background[:5]
@@ -76,32 +68,32 @@ async def gerar_headshot(
             The shots should have a professional look for corporate use. DSLR photo style, centered composition, no accessories unless specified.
             """
 
+            # ✅ Agora usando URL como input
             prediction = replicate.run(
                 "black-forest-labs/flux-kontext-pro",
                 input={
                     "prompt": prompt,
-                    "image": image_bytes,
+                    "image": image_input_url,
                     "output_format": "jpg"
                 }
             )
 
-            # 'prediction' será uma URL para imagem (ou uma lista de URLs)
             if isinstance(prediction, list):
                 image_url_replicate = prediction[0]
             else:
                 image_url_replicate = prediction
 
-            # ⚠️ Fazer download da imagem e salvar no seu servidor para servir no /temp
+            # Faz download da imagem gerada
             img_data = requests.get(image_url_replicate).content
             output_path = f"temp/{img_id}_{i}_output.jpg"
             with open(output_path, "wb") as f:
                 f.write(img_data)
 
-            # Retorna a URL da sua própria API
+            # Adiciona URL final que será servida pelo Render
             image_url = f"{API_BASE_URL}/temp/{img_id}_{i}_output.jpg"
             image_urls.append(image_url)
 
-            time.sleep(0.5)
+            time.sleep(0.5)  # reduz carga no servidor da Replicate
 
         return {"image_urls": image_urls}
 
@@ -109,4 +101,3 @@ async def gerar_headshot(
         import traceback
         traceback.print_exc()
         return JSONResponse(status_code=500, content={"erro": str(e)})
-
