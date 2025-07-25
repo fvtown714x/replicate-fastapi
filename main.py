@@ -58,7 +58,7 @@ async def gerar_headshot(
 
         for i, bg in enumerate(selected_backgrounds):
             prompt = f"""
-            Provide an ultra high-resolution professional headshot for this
+            professional headshot for this
             {gender}, 
             who works as a {profession},
             aged {age},
