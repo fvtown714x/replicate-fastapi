@@ -64,8 +64,7 @@ async def gerar_headshot(
             aged {age},
             give him a {clothing} outfit. 
             The background of this image is {bg} and should be related to the {profession}. 
-            The image is shot with studio-quality lighting, shallow depth of field, and soft shadows.  
-            The shots should have a professional look for corporate use. DSLR photo style, centered composition, no accessories unless specified.
+            Don't create a new person.
             """
 
             # ✅ Agora usando URL como input
