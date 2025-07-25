@@ -58,7 +58,7 @@ async def gerar_headshot(
 
         for i, bg in enumerate(selected_backgrounds):
             prompt = f"""
-            Professional Headshot, wearing a {clothing} outfit. The background of this image is {bg}. 
+            Professional Photo, good lighting, wearing {clothing} outfit. The background of this image is {bg}.
             """
 
             # ✅ Agora usando URL como input
