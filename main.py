@@ -58,8 +58,9 @@ async def gerar_headshot(
 
         for i, bg in enumerate(selected_backgrounds):
             prompt = f"""
-            Professional Photo, good lighting, wearing {clothing} outfit. The background of this image is {bg}.
+            Professional LinkedIn-style headshot of the same person in the uploaded image. Studio lighting, DSLR quality, shallow depth of field. Wearing {clothing}. Background is {bg}.
             """
+
 
             # ✅ Agora usando URL como input
             prediction = replicate.run(
