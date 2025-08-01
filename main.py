@@ -8,6 +8,7 @@ import time
 import shutil
 from dotenv import load_dotenv
 from uuid import uuid4
+import json
 
 load_dotenv()
 
@@ -15,16 +16,16 @@ app = FastAPI()
 
 API_BASE_URL = "https://replicate-fastapi.onrender.com"
 
-# CORS para testes locais
+# CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # ajuste para seu domínio Webflow depois
+    allow_origins=["*"],  # ajuste depois
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Criar e expor pasta temp para acesso público
+# Pasta pública para imagens temporárias
 os.makedirs("temp", exist_ok=True)
 app.mount("/temp", StaticFiles(directory="temp"), name="temp")
 
@@ -38,44 +39,48 @@ async def gerar_headshot(
     gender: str = Form(...)
 ):
     try:
+        clothing_list = json.loads(clothing)
+        background_list = json.loads(background)
+
+        if len(clothing_list) != len(background_list):
+            return JSONResponse(status_code=400, content={"erro": "Você deve selecionar o mesmo número de roupas e fundos."})
+
         # Salvar imagem temporária
         file_ext = image.filename.split(".")[-1]
         img_id = str(uuid4())
-        input_path = f"temp/{img_id}.{file_ext}"
+        input_filename = f"{img_id}.{file_ext}"
+        input_path = f"temp/{input_filename}"
 
         with open(input_path, "wb") as f:
             shutil.copyfileobj(image.file, f)
 
-        # Construir o prompt base
-        prompt_base = (
-            f"Professional headshot of a {age}-year-old {gender.lower()} {profession}, "
-            f"wearing {clothing}, background: {background}. "
-            f"High-quality DSLR style, well-lit, studio background."
-        )
+        input_url = f"{API_BASE_URL}/temp/{input_filename}"
 
-        # Gerar 5 variações
         urls = []
-        for i in range(5):
-            prompt = f"{prompt_base} (variation {i+1})"
-            input_data = {
-                "prompt": prompt,
-                "input_image": open(input_path, "rb"),
-                "output_format": "jpg"
-            }
+
+        for idx, (clothe, bg) in enumerate(zip(clothing_list, background_list)):
+            prompt = (
+                f"Professional headshot of a {age}-year-old {gender.lower()} {profession}, "
+                f"wearing {clothe}, background: {bg}. "
+                f"High-quality DSLR style, well-lit, studio background."
+            )
 
             output = replicate.run(
                 "black-forest-labs/flux-kontext-pro",
-                input=input_data
+                input={
+                    "prompt": prompt,
+                    "input_image": input_url,
+                    "output_format": "jpg"
+                }
             )
 
-            output_path = f"temp/{img_id}_output_{i+1}.jpg"
+            output_path = f"temp/{img_id}_output_{idx+1}.jpg"
             with open(output_path, "wb") as f:
-                output_bytes = output.read()
-                f.write(output_bytes)
+                f.write(output.read())
 
-            image_url = f"{API_BASE_URL}/temp/{img_id}_output_{i+1}.jpg"
+            image_url = f"{API_BASE_URL}/temp/{img_id}_output_{idx+1}.jpg"
             urls.append(image_url)
-            time.sleep(0.3)  # Pequeno delay para evitar sobrecarga
+            time.sleep(0.3)
 
         return {"image_urls": urls}
 
