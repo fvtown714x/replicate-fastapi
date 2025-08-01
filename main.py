@@ -26,7 +26,9 @@ app.add_middleware(
 
 # Criar e expor pasta temp para acesso público
 os.makedirs("temp", exist_ok=True)
-app.mount("/temp", StaticFiles(directory="temp"), name="temp")@app.post("/gerar-headshot")
+app.mount("/temp", StaticFiles(directory="temp"), name="temp")
+
+@app.post("/gerar-headshot")
 async def gerar_headshot(
     image: UploadFile = File(...),
     clothing: str = Form(...),
