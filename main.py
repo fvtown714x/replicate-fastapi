@@ -67,19 +67,15 @@ async def gerar_headshot(
 
             output = replicate.run(
                 "black-forest-labs/flux-kontext-pro",
-                input={
-                    "prompt": prompt,
-                    "input_image": input_url,
-                    "output_format": "jpg"
-                }
+                input=input_data
             )
+            
+            # `output` é uma URL ou lista de URLs
+            if isinstance(output, list):
+                urls.extend(output)
+            else:
+                urls.append(output)
 
-            output_path = f"temp/{img_id}_output_{idx+1}.jpg"
-            with open(output_path, "wb") as f:
-                f.write(output.read())
-
-            image_url = f"{API_BASE_URL}/temp/{img_id}_output_{idx+1}.jpg"
-            urls.append(image_url)
             time.sleep(0.3)
 
         return {"image_urls": urls}
