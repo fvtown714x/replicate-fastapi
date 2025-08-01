@@ -15,10 +15,6 @@ app = FastAPI()
 
 API_BASE_URL = "https://replicate-fastapi.onrender.com"
 
-origins = [
-     "https://jobodega.webflow.io/replicate",  
-    "https://www.jobodega.com/replicate",
-]
 # CORS para testes locais
 app.add_middleware(
     CORSMiddleware,
