@@ -66,14 +66,16 @@ async def gerar_headshot(
             print(f"🔹 Prompt {idx+1}: {prompt}")  # <-- aqui estava o erro
 
             with open(input_path, "rb") as image_file:
+                input_data = {
+                    "prompt": prompt,
+                    "input_image": image_file,
+                    "output_format": "jpg"
+                }
                 output = replicate.run(
                     "black-forest-labs/flux-kontext-pro",
-                    input={
-                        "prompt": prompt,
-                        "input_image": image_file,
-                        "output_format": "jpg"
-                    }
+                    input=input_data
                 )
+
 
             output_path = f"temp/{img_id}_output_{idx+1}.jpg"
             with open(output_path, "wb") as f:
