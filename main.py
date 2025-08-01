@@ -30,18 +30,18 @@ app.add_middleware(
 os.makedirs("temp", exist_ok=True)
 app.mount("/temp", StaticFiles(directory="temp"), name="temp")
 
-
 @app.post("/gerar-headshot")
 async def gerar_headshot(
     image: UploadFile = File(...),
+    name: str = Form(...),
     gender: str = Form(...),
     profession: str = Form(...),
     age: str = Form(...),
-    clothing: str = Form(...),
+    clothing: List[str] = Form(...),
     background: List[str] = Form(...),
 ):
     try:
-        # Salva imagem recebida localmente
+        # Salva imagem original
         file_ext = image.filename.split(".")[-1]
         img_id = str(uuid4())
         input_filename = f"{img_id}.{file_ext}"
@@ -50,44 +50,37 @@ async def gerar_headshot(
         with open(input_path, "wb") as f:
             shutil.copyfileobj(image.file, f)
 
-        # Cria URL pública da imagem que acabou de salvar
         image_input_url = f"{API_BASE_URL}/temp/{input_filename}"
-
         image_urls = []
-        selected_backgrounds = background[:5]
 
-        for i, bg in enumerate(selected_backgrounds):
+        selected_styles = list(zip(clothing[:5], background[:5]))
+
+        for i, (cloth, bg) in enumerate(selected_styles):
             prompt = f"""
-            Professional LinkedIn-style headshot of the same person in the uploaded image. Studio lighting, DSLR quality, shallow depth of field. Wearing {clothing}. Background is {bg}.
+            Professional DSLR headshot of a {gender} {profession}, around {age} years old, named {name}, wearing {cloth}, with a {bg} background.
+            Studio lighting, shallow depth of field, ultra realistic.
             """
 
-
-            # ✅ Agora usando URL como input
             prediction = replicate.run(
                 "black-forest-labs/flux-kontext-pro",
                 input={
-                    "prompt": prompt,
+                    "prompt": prompt.strip(),
                     "image": image_input_url,
                     "output_format": "jpg"
                 }
             )
 
-            if isinstance(prediction, list):
-                image_url_replicate = prediction[0]
-            else:
-                image_url_replicate = prediction
-
-            # Faz download da imagem gerada
+            image_url_replicate = prediction[0] if isinstance(prediction, list) else prediction
             img_data = requests.get(image_url_replicate).content
+
             output_path = f"temp/{img_id}_{i}_output.jpg"
             with open(output_path, "wb") as f:
                 f.write(img_data)
 
-            # Adiciona URL final que será servida pelo Render
-            image_url = f"{API_BASE_URL}/temp/{img_id}_{i}_output.jpg"
-            image_urls.append(image_url)
+            final_url = f"{API_BASE_URL}/temp/{img_id}_{i}_output.jpg"
+            image_urls.append(final_url)
 
-            time.sleep(0.5)  # reduz carga no servidor da Replicate
+            time.sleep(0.5)
 
         return {"image_urls": image_urls}
 
