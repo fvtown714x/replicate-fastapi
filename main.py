@@ -26,13 +26,14 @@ app.add_middleware(
 
 # Criar e expor pasta temp para acesso público
 os.makedirs("temp", exist_ok=True)
-app.mount("/temp", StaticFiles(directory="temp"), name="temp")
-
-@app.post("/gerar-headshot")
+app.mount("/temp", StaticFiles(directory="temp"), name="temp")@app.post("/gerar-headshot")
 async def gerar_headshot(
     image: UploadFile = File(...),
     clothing: str = Form(...),
     background: str = Form(...),
+    profession: str = Form(...),
+    age: int = Form(...),
+    gender: str = Form(...)
 ):
     try:
         # Salvar imagem temporária
@@ -43,32 +44,38 @@ async def gerar_headshot(
         with open(input_path, "wb") as f:
             shutil.copyfileobj(image.file, f)
 
-        # Prompt para a Replicate
-        prompt = f"Professional headshot, wearing {clothing}, background: {background}"
-
-        input_data = {
-            "prompt": prompt,
-            "input_image": open(input_path, "rb"),
-            "output_format": "jpg"
-        }
-
-        output = replicate.run(
-            "black-forest-labs/flux-kontext-pro",
-            input=input_data
+        # Construir o prompt base
+        prompt_base = (
+            f"Professional headshot of a {age}-year-old {gender.lower()} {profession}, "
+            f"wearing {clothing}, background: {background}. "
+            f"High-quality DSLR style, well-lit, studio background."
         )
 
-        # Salvar imagem gerada
-        output_path = f"temp/{img_id}_output.jpg"
-        with open(output_path, "wb") as f:
-            output_bytes = output.read()
+        # Gerar 5 variações
+        urls = []
+        for i in range(5):
+            prompt = f"{prompt_base} (variation {i+1})"
+            input_data = {
+                "prompt": prompt,
+                "input_image": open(input_path, "rb"),
+                "output_format": "jpg"
+            }
+
+            output = replicate.run(
+                "black-forest-labs/flux-kontext-pro",
+                input=input_data
+            )
+
+            output_path = f"temp/{img_id}_output_{i+1}.jpg"
             with open(output_path, "wb") as f:
+                output_bytes = output.read()
                 f.write(output_bytes)
 
+            image_url = f"{API_BASE_URL}/temp/{img_id}_output_{i+1}.jpg"
+            urls.append(image_url)
+            time.sleep(0.3)  # Pequeno delay para evitar sobrecarga
 
-        # Retornar URL acessível publicamente
-        image_url = f"{API_BASE_URL}/temp/{img_id}_output.jpg"
-        time.sleep(0.3)  # Pequena espera (300ms)
-        return {"image_url": image_url}
+        return {"image_urls": urls}
 
     except Exception as e:
         return JSONResponse(status_code=500, content={"erro": str(e)})
