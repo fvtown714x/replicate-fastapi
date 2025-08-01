@@ -57,13 +57,13 @@ async def gerar_headshot(
         urls = []
 
         # Loop para gerar combinações (mínimo do tamanho das duas listas)
-        for idx, (clothe, bg) in enumerate(zip(clothing_list, background_list)):
+                for idx, (clothe, bg) in enumerate(zip(clothing_list, background_list)):
             prompt = (
                 f"Professional LinkedIn headshot of a {age}-year-old {gender.lower()} {profession}, "
                 f"wearing {clothe}, with a background of {bg}. "
                 f"High-quality DSLR photo, studio lighting, shallow depth of field, realistic details, professional attire, clean background."
             )
-                     print(f"🔹 Prompt {idx+1}: {prompt}")
+            print(f"🔹 Prompt {idx+1}: {prompt}")  # <-- aqui estava o erro
 
             with open(input_path, "rb") as image_file:
                 output = replicate.run(
@@ -75,14 +75,14 @@ async def gerar_headshot(
                     }
                 )
 
-            # Salvar imagem gerada
             output_path = f"temp/{img_id}_output_{idx+1}.jpg"
             with open(output_path, "wb") as f:
                 f.write(output.read())
 
             image_url = f"{API_BASE_URL}/temp/{img_id}_output_{idx+1}.jpg"
             urls.append(image_url)
-            time.sleep(0.3)  # Evita sobrecarregar a API com muitas requisições rápidas
+            time.sleep(0.3)
+
 
         return {"image_urls": urls}
 
