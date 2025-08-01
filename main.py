@@ -106,7 +106,7 @@ async def gerar_headshot(
             with open(input_path, "rb") as image_file:
                 output = replicate.run(
                     "black-forest-labs/flux-kontext-pro",
-                    input_data={
+                    input={
                         "prompt": prompt,
                         "input_image": image_file,
                         "output_format": "jpg"
