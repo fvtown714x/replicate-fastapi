@@ -2,6 +2,7 @@ from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from itertools import product
 import replicate
 import os
 import time
@@ -90,7 +91,9 @@ async def gerar_headshot(
         urls = []
 
         # Loop para gerar combinações (mínimo do tamanho das duas listas)
-        for idx, (clothe, bg) in enumerate(zip(clothing_list, background_list)):
+        combinations = list(product(clothing_list, background_list))
+
+        for idx, (clothe, bg) in enumerate(combinations):
             attire_desc = map_attire_description(clothe, gender)
             background_desc = map_background_description(bg)
         
