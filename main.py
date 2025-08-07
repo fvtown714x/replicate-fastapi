@@ -88,46 +88,52 @@ async def gerar_headshot(
         with open(input_path, "wb") as f:
             shutil.copyfileobj(image.file, f)
 
-        urls = []
+       generated_images = []
 
-        # Loop para gerar combinações (mínimo do tamanho das duas listas)
-        combinations = list(product(clothing_list, background_list))
-
-        for idx, (clothe, bg) in enumerate(combinations):
-            attire_desc = map_attire_description(clothe, gender)
-            background_desc = map_background_description(bg)
-        
-            prompt = (
-                f"Create a professional headshot of this subject in soft studio lighting, "
-                f"wearing {attire_desc} outfit, background is {background_desc}. "
-                f"Maintain precise replication of subject's pose, head tilt, and eye line, angle toward the camera, "
-                f"skin tone, and any jewelry."
-            )
-        
-            print(f"🔹 Prompt {idx+1}: {prompt}")
-        
-            with open(input_path, "rb") as image_file:
-                output = replicate.run(
-                    "black-forest-labs/flux-kontext-pro",
-                    input={
-                        "prompt": prompt,
-                        "input_image": image_file,
-                        "output_format": "jpg"
-                    }
+            # Gera todas as combinações possíveis
+            combinations = list(product(clothing_list, background_list))
+            
+            for idx, (clothe, bg) in enumerate(combinations):
+                attire_desc = map_attire_description(clothe, gender)
+                background_desc = map_background_description(bg)
+            
+                prompt = (
+                    f"Create a professional headshot of this subject in soft studio lighting, "
+                    f"wearing {attire_desc} outfit, background is {background_desc}. "
+                    f"Maintain precise replication of subject's pose, head tilt, and eye line, angle toward the camera, "
+                    f"skin tone, and any jewelry."
                 )
-        
-            output_path = f"temp/{img_id}_output_{idx+1}.jpg"
-            with open(output_path, "wb") as f:
-                f.write(output.read())
-        
-            image_url = f"{API_BASE_URL}/temp/{img_id}_output_{idx+1}.jpg"
-            urls.append(image_url)
-            time.sleep(0.3)
+            
+                print(f"🔹 Prompt {idx+1}: {prompt}")
+            
+                with open(input_path, "rb") as image_file:
+                    output = replicate.run(
+                        "black-forest-labs/flux-kontext-pro",
+                        input={
+                            "prompt": prompt,
+                            "input_image": image_file,
+                            "output_format": "jpg"
+                        }
+                    )
+            
+                output_path = f"temp/{img_id}_output_{idx+1}.jpg"
+                with open(output_path, "wb") as f:
+                    f.write(output.read())
+            
+                image_url = f"{API_BASE_URL}/temp/{img_id}_output_{idx+1}.jpg"
+                
+                # Agora retorna imagem + dados
+                generated_images.append({
+                    "url": image_url,
+                    "attire": clothe,
+                    "background": bg
+                })
+            
+                time.sleep(0.3)
+            
+            # Retorna com todos os metadados
+            return JSONResponse(content={"images": generated_images})
 
-
-
-
-        return {"image_urls": urls}
 
     except Exception as e:
         print("❌ Erro:", str(e))
