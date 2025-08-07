@@ -88,12 +88,12 @@ async def gerar_headshot(
         with open(input_path, "wb") as f:
             shutil.copyfileobj(image.file, f)
 
-       generated_images = []
+        generated_images = []
 
             # Gera todas as combinações possíveis
-            combinations = list(product(clothing_list, background_list))
+        combinations = list(product(clothing_list, background_list))
             
-            for idx, (clothe, bg) in enumerate(combinations):
+        for idx, (clothe, bg) in enumerate(combinations):
                 attire_desc = map_attire_description(clothe, gender)
                 background_desc = map_background_description(bg)
             
@@ -132,7 +132,7 @@ async def gerar_headshot(
                 time.sleep(0.3)
             
             # Retorna com todos os metadados
-            return JSONResponse(content={"images": generated_images})
+        return JSONResponse(content={"images": generated_images})
 
 
     except Exception as e:
