@@ -37,11 +37,11 @@ def map_attire_description(attire, gender):
     if attire == "business professional":
         return "a suit and tie" if gender == "male" else "a professional corporate outfit"
     elif attire == "business casual":
-        return "a suit with no tie" if gender == "male" else "a professional corporate outfit"
+        return "a suit with no tie" if gender == "male" else "a business casual outfit"     # Updated description
     elif attire == "casual":
         return "a t-shirt, a button-up shirt, a flannel, a sweater vest, or something currently trendy and fashionable"
     elif attire == "medical":
-        return "modern medical attire, wearing a clean white lab coat over scrubs or business-casual medical clothing, with a stethoscope around their neck and an ID badge clipped to their coat"
+        return "modern medical attire, wearing a clean white lab coat over scrubs or business-casual medical clothing, with a stethoscope around their neck" # Removed unneeded description
     elif attire == "scientist":
         return "a white lab coat over casual-professional clothes, safety goggles on their head or eyes, and blue nitrile gloves"
     else:
@@ -50,7 +50,7 @@ def map_attire_description(attire, gender):
 def map_background_description(background):
     background = background.lower()
     if background == "light gray":
-        return "a neutral light grey photo studio background"
+        return "a neutral light grey professional studio photo background"     # Updated description
     elif background == "soft gradient":
         return "a soft gradient background"
     elif background == "corporate office":
@@ -60,7 +60,7 @@ def map_background_description(background):
     elif background == "trendy indoor space":
         return "a picturesque view of the inside of a world-famous tourist attraction"
     elif background == "startup office":
-        return "a modern startup office background"
+        return "a modern Bay-Area tech startup office"     # Updated description
     else:
         return background
 
@@ -88,52 +88,46 @@ async def gerar_headshot(
         with open(input_path, "wb") as f:
             shutil.copyfileobj(image.file, f)
 
-        generated_images = []
+        urls = []
 
-            # Gera todas as combinações possíveis
+        # Loop para gerar combinações (mínimo do tamanho das duas listas)
         combinations = list(product(clothing_list, background_list))
-            
-        for idx, (clothe, bg) in enumerate(combinations):
-                attire_desc = map_attire_description(clothe, gender)
-                background_desc = map_background_description(bg)
-            
-                prompt = (
-                    f"Create a professional headshot of this subject in soft studio lighting, "
-                    f"wearing {attire_desc} outfit, background is {background_desc}. "
-                    f"Maintain precise replication of subject's pose, head tilt, and eye line, angle toward the camera, "
-                    f"skin tone, and any jewelry."
-                )
-            
-                print(f"🔹 Prompt {idx+1}: {prompt}")
-            
-                with open(input_path, "rb") as image_file:
-                    output = replicate.run(
-                        "black-forest-labs/flux-kontext-pro",
-                        input={
-                            "prompt": prompt,
-                            "input_image": image_file,
-                            "output_format": "jpg"
-                        }
-                    )
-            
-                output_path = f"temp/{img_id}_output_{idx+1}.jpg"
-                with open(output_path, "wb") as f:
-                    f.write(output.read())
-            
-                image_url = f"{API_BASE_URL}/temp/{img_id}_output_{idx+1}.jpg"
-                
-                # Agora retorna imagem + dados
-                generated_images.append({
-                    "url": image_url,
-                    "attire": clothe,
-                    "background": bg
-                })
-            
-                time.sleep(0.3)
-            
-            # Retorna com todos os metadados
-        return JSONResponse(content={"images": generated_images})
 
+        for idx, (clothe, bg) in enumerate(combinations):
+            attire_desc = map_attire_description(clothe, gender)
+            background_desc = map_background_description(bg)
+        
+            prompt = (
+                f"Create a professional headshot of this {gender} subject in professional studio lighting, " # Added in gender variable
+                f"wearing {attire_desc} outfit, background is {background_desc}. "
+                f"Maintain precise replication of subject's pose, head tilt, and eye line, angle toward the camera, "
+                f"skin tone, and any jewelry."
+            )
+        
+            print(f"🔹 Prompt {idx+1}: {prompt}")
+        
+            with open(input_path, "rb") as image_file:
+                output = replicate.run(
+                    "black-forest-labs/flux-kontext-pro",
+                    input={
+                        "prompt": prompt,
+                        "input_image": image_file,
+                        "output_format": "jpg"
+                    }
+                )
+        
+            output_path = f"temp/{img_id}_output_{idx+1}.jpg"
+            with open(output_path, "wb") as f:
+                f.write(output.read())
+        
+            image_url = f"{API_BASE_URL}/temp/{img_id}_output_{idx+1}.jpg"
+            urls.append(image_url)
+            time.sleep(0.3)
+
+
+
+
+        return {"image_urls": urls}
 
     except Exception as e:
         print("❌ Erro:", str(e))
