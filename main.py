@@ -74,6 +74,8 @@ async def gerar_headshot(
     gender: str = Form(...)
 ):
     try:
+        print(f"clothing raw value: {clothing}")
+        print(f"background raw value: {background}")
         clothing_list = json.loads(clothing)
         background_list = json.loads(background)
 
