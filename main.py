@@ -67,45 +67,41 @@ def map_background_description(background):
 @app.post("/gerar-headshot")
 async def gerar_headshot(
     image: UploadFile = File(...),
-    clothing: str = Form(...),       # Deve ser uma string JSON com lista
-    background: str = Form(...),     # Deve ser uma string JSON com lista
+    clothing: str = Form(...),       
+    background: str = Form(...),     
     profession: str = Form(...),
     age: int = Form(...),
     gender: str = Form(...)
 ):
     try:
-        # Parse as listas enviadas como JSON
         clothing_list = json.loads(clothing)
         background_list = json.loads(background)
 
         if not clothing_list or not background_list:
             return JSONResponse(status_code=400, content={"erro": "clothing ou background vazio."})
 
-        # Salvar imagem original temporária
         file_ext = image.filename.split(".")[-1]
         img_id = str(uuid4())
         input_path = f"temp/{img_id}.{file_ext}"
         with open(input_path, "wb") as f:
             shutil.copyfileobj(image.file, f)
 
-        urls = []
-
-        # Loop para gerar combinações (mínimo do tamanho das duas listas)
+        images = []
         combinations = list(product(clothing_list, background_list))
 
         for idx, (clothe, bg) in enumerate(combinations):
             attire_desc = map_attire_description(clothe, gender)
             background_desc = map_background_description(bg)
-        
+
             prompt = (
-                f"Create a professional headshot of this {gender} subject in professional studio lighting, " # Added in gender variable
+                f"Create a professional headshot of this {gender} subject in professional studio lighting, "
                 f"wearing {attire_desc} outfit, background is {background_desc}. "
-                f"Maintain precise replication of subject's pose, head tilt, and eye line, angle toward the camera, "
-                f"skin tone, and any jewelry."
+                f"Maintain precise replication of subject's pose, head tilt, and eye line, "
+                f"angle toward the camera, skin tone, and any jewelry."
             )
-        
+
             print(f"🔹 Prompt {idx+1}: {prompt}")
-        
+
             with open(input_path, "rb") as image_file:
                 output = replicate.run(
                     "black-forest-labs/flux-kontext-pro",
@@ -115,21 +111,25 @@ async def gerar_headshot(
                         "output_format": "jpg"
                     }
                 )
-        
+
             output_path = f"temp/{img_id}_output_{idx+1}.jpg"
             with open(output_path, "wb") as f:
                 f.write(output.read())
-        
+
             image_url = f"{API_BASE_URL}/temp/{img_id}_output_{idx+1}.jpg"
-            urls.append(image_url)
+
+            images.append({
+                "url": image_url,
+                "attire": clothe,
+                "background": bg
+            })
+
             time.sleep(0.3)
 
-
-
-
-        return {"image_urls": urls}
+        return {"images": images}
 
     except Exception as e:
         print("❌ Erro:", str(e))
         traceback.print_exc()
         return JSONResponse(status_code=500, content={"erro": str(e)})
+
